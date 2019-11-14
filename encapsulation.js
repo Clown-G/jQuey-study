@@ -180,7 +180,7 @@ function prev(el) {
 	if (el.nodeType != 1) {	//	判断参数是否是一个元素
 		return '请输入正确的元素';
 	}
-	return el.previousElementSibling;	//	返回值是传入元素的上一个统计元素
+	return el.previousElementSibling;	//	返回值是传入元素的上一个同级元素
 }
 
 /*
@@ -257,7 +257,7 @@ function nextAll(el) {
 }
 
 /*
-	作用：找到排除自己以外的所有兄弟元素或者满足第二参数的元素
+	作用：找到排除自己以外的所有兄弟元素
 	参数：
 		el:是一个元素
 		str:字符串，是 class 名或者标签名
@@ -309,6 +309,31 @@ function siblings(el,str) {
 }
 
 /*
+	作用：一个兼容低版本 IE 的事件监听函数
+	参数：
+		el：元素
+		event：需要绑定的事件
+		fn：触发事件是需要执行的函数
+*/
+
+function addEvent(el,event,fn) {
+	if(el.nodeType != 1){
+	   return '请输入正确的元素'
+	}  
+	if(el.addEventListener){	//	判断 el 是否为元素
+	   // 谷歌			   
+	   el.addEventListener(event,function(){
+		   typeof fn == 'function' && fn.call(el);
+	   });				   
+	}else{
+	   // ie
+	   el.attachEvent('on'+event,function(){
+		   typeof fn == 'function' && fn.apply(el);
+	   });
+	}
+}
+
+/*
 	作用：获取倒计时的函数
 	参数：是一个对象
 		对象的第一个属性：未来时间
@@ -316,14 +341,14 @@ function siblings(el,str) {
 			函数的实参是：天数，小时，分钟，秒
 */
 function countDown(obj){
-	var date =	obj.future.getTime()	//	未来的时间
-	var nowDate = new Date().getTime()	//	当前时间
-	var timeRange = (date - nowDate)/1000	//	将未来时间与当前时间的差值换算为秒
-	var day = parseInt(timeRange/(60*60*24))	//	将差值换算为天
-	var hours = parseInt((timeRange - (day*60*60*24))/(60*60))	//	将差值换算为小时
-	var mins = parseInt((timeRange - (day*60*60*24 + hours*60*60))/60) 	//	将差值换算为分钟
-	var seconds = parseInt(timeRange - (day*60*60*24 + hours*60*60 + mins*60))	//	将差值换算为秒
-	console.log(day,hours,mins,seconds)
+	var date =	new Date(obj.future).getTime();	//	未来的时间
+	var nowDate = new Date().getTime();	//	当前时间
+	var timeRange = (date - nowDate)/1000;	//	将未来时间与当前时间的差值换算为秒
+	var day = parseInt(timeRange/(60*60*24));	//	将差值换算为天
+	var hours = parseInt((timeRange - (day*60*60*24))/(60*60));	//	将差值换算为小时
+	var mins = parseInt((timeRange - (day*60*60*24 + hours*60*60))/60); 	//	将差值换算为分钟
+	var seconds = parseInt(timeRange - (day*60*60*24 + hours*60*60 + mins*60));	//	将差值换算为秒
+	// console.log(day,hours,mins,seconds);
 	typeof obj.success == 'function' && obj.success({
 		day:day,
 		hours:hours,
