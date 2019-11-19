@@ -317,20 +317,21 @@ function siblings(el,str) {
 */
 
 function addEvent(el,event,fn) {
-	if(el.nodeType != 1){
+	if(!(el.nodeType == 1 || el.nodeType == 9)){
 	   return '请输入正确的元素'
-	}  
+	}
+	function fn1(ev){
+		ev = ev || window.event;
+		typeof fn == 'function' && fn.call(el,ev,fn1);
+	}
 	if(el.addEventListener){	//	判断 el 是否为元素
 	   // 谷歌			   
-	   el.addEventListener(event,function(){
-		   typeof fn == 'function' && fn.call(el);
-	   });				   
+	   el.addEventListener(event,fn1);				   
 	}else{
 	   // ie
-	   el.attachEvent('on'+event,function(){
-		   typeof fn == 'function' && fn.apply(el);
-	   });
+	   el.attachEvent('on'+event,fn1);
 	}
+	
 }
 
 /*
@@ -355,4 +356,139 @@ function countDown(obj){
 		mins:mins,
 		seconds:seconds
 	}) 
+}
+
+/*
+	作用：封装一个拖动元素的函数
+	参数：
+		参数一：el，需要拖动的元素
+		参数二：fn，一个带参数的函数
+*/
+function darg(el,fn){	//	封装的拖动函数
+	addEvent(el,'mousedown',function(ev){	//	当鼠标按下 box 元素触发事件
+		var originL = ev.pageX;	//	获取鼠标最初在 x 轴的位置
+		var originT = ev.pageY;	//	获取鼠标最初在 y 轴的位置
+		var obj = this.getBoundingClientRect();	//	获取当前元素的的信息
+		var starL = obj.left;	//	获取元素开始的 left 值
+		var starT = obj.top;	//	获取元素开始的 top 值
+		var fnN = null;	//	定义一个 fn 变量用来存储函数名
+		addEvent(document,'mousemove',function(ev,fnName) {	//	当鼠标移动时触发事件
+			var disL = ev.pageX - originL;	//	获取当期鼠标的 x 轴值同鼠标最初在 x 轴的差值
+			var disT = ev.pageY - originT;	//	获取当期鼠标的 y 轴值同鼠标最初在 y 轴的差值
+			el.style.left = starL + disL + 'px';	//	改变 box 元素的 left 值
+			el.style.top = starT + disT + 'px';	//	改变 box 元素的 top 值
+			fnN = fnName;	//	将本事件调用的函数名存储起来
+			typeof fn == 'function' && fn(ev);	//	调用传入的 fn 函数
+			
+		})
+		addEvent(document,'mouseup',function(ev,fnName){	//	当鼠标抬起触发事件
+			document.removeEventListener('mousemove',fnN);	//	解绑鼠标移动事件
+			document.removeEventListener('mouseup',fnName);	//	解绑鼠标抬起事件
+		})
+		ev.preventDefault();	//	阻止浏览器的默认行为
+	})
+}
+
+/*
+	作用：封装一个放大镜的函数
+	参数：el，盛放放大镜的容器
+*/
+
+function enlarge(el) {
+	var wrap = $(el)[0];	//	获取放大镜的父级元素
+	var origin = wrap.firstElementChild;	//	获取放大镜的第一个子元素
+	var nextb  = next(origin);	//	获取 origin 的下一个兄弟元素
+	addEvent(origin,'mouseenter',function(ev){	//	给第一个子元添加鼠标移入事件
+		var div = document.createElement('div');	//	创建一个 遮罩元素
+		this.appendChild(div);	//	把遮罩元素插入到父级元素中					
+		addEvent(this,'mousemove',function(ev){					
+			var disL = ev.pageX - this.offsetLeft - div.clientWidth/2;	//	获取鼠标移入时 x 轴与 元素 的 left 差值减去 div 宽度的一半
+			var disH = ev.pageY - this.offsetTop - div.clientHeight/2	//	获取鼠标移入时 y 轴与 元素 的 left 差值减去 div 高度的一半
+			var maxL =  this.clientWidth - div.clientWidth;	//	获取 div 在 元素中移动的最大 left 值
+			var maxH = this.clientHeight - div.clientHeight; //	获取 div 在元素中移动的最大 top 值
+			if (disL >= maxL) {	//	判断 left 差值是否大于最大值
+				disL = maxL;
+			} else if (disL <= 0) {	//	判断 left 差值是否小于0
+				disL = 0;
+			} 
+			if (disH >= maxH) {	//	判断 top 差值是否大于最大值
+				disH = maxH;
+			} else if (disH <= 0) {	//	判断 top 差值是否小于0
+				disH = 0;
+			}
+			div.style.left = disL + 'px';	//	给 div 的 left 重新赋值
+			div.style.top = disH + 'px';	//	给 div 的 top 重新赋值
+			var proL = disL / maxL;	//	获取鼠标在 x 轴的比例
+			var proH = disH / maxH;	//	获取鼠标在 y 轴的比例						
+			var oImg =  nextb.firstElementChild; 	//	获取大图
+			var disW = oImg.clientWidth - nextb.clientWidth;	//	获取图片移动的最大宽度
+			var disT = oImg.clientHeight - nextb.clientHeight;	//	获取图片移动的最大高度	
+			nextb.style.display = 'block';	//	给 display 重新设置值
+			oImg.style.left = -disW * proL + 'px'; //	重新设置图片的 left 值
+			oImg.style.top = - disT * proH + 'px';	//	重新设置图片的 top 值
+		})
+		addEvent(this,'mouseleave',function(ev){						
+			nextb.style.display = 'none';	//	给 display 重新设置值
+			div.remove();	//	移除 div 元素
+		})
+	})
+}
+
+/*
+	作用：封装一个判断两个元素是否碰撞的函数
+	参数：
+		参数一：
+		参数二：元素
+	返回值：
+		ture 两个元素碰撞
+		false 两个元素没有碰撞
+*/
+
+function collision(obj,obj1) {
+	var obj = obj.getBoundingClientRect();	//	获取obj的各种信息
+	var obj1 = obj1.getBoundingClientRect();	//	获取obj1的各种信息
+	//	获取obj1的 left , top , top , bottom
+	var pl = obj1.left;
+	var pr = obj1.right;
+	var pt = obj1.top;
+	var pb = obj1.bottom;
+	//	获取obj的 left , top , top , bottom
+	var bl = obj.left;
+	var br = obj.right;
+	var bt = obj.top;
+	var bb = obj.bottom;
+	if (pr >= bl && pb >= bt && pl <= br && pt <= bb) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+/*
+	作用：封装一个滚轮滚动事件
+	参数：
+		参数一：触发滚轮事件的元素
+		参数二：滚轮上滚执行的函数
+		参数二：滚轮下滚执行的函数
+*/
+
+function wheel(obj,upFn,downFn) {
+	var str = window.navigator.userAgent;	//	获取浏览器的代理信息
+	if (str.indexOf('Chrome') != -1) {	//	在谷歌浏览器中
+		addEvent(obj,'wheel',function(ev) {	
+			if (ev.wheelDelta > 0) {	//	滚轮上滚
+				typeof upFn == 'function' && upFn();
+			} else if (ev.wheelDelta < 0) {	//	滚轮下滚
+				typeof downFn == 'function' && downFn();
+			}
+		})				
+	} else if (str.indexOf('Firefox') != -1) {	//	在火狐浏览器中
+		addEvent(obj,'DOMMouseScroll',function(ev) {
+			if (ev.detail < 0) {	//	滚轮上滚
+				typeof upFn == 'function' && upFn();
+			} else if (ev.detail > 0) { //	滚轮下滚
+				typeof downFn == 'function' && downFn();
+			}
+		})
+	}
 }
